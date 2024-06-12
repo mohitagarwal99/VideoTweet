@@ -22,8 +22,9 @@ const uploadOnCloud = async (localFilePath) => {
                 resource_type: "auto",
             },
         );
-        console.log("File uploaded successfully ", uploadResult);
-        console.log("File url: ", uploadResult.url);
+        // console.log("File uploaded successfully ", uploadResult);
+        console.log("File uploaded successfully, url: ", uploadResult.url);
+        fs.unlinkSync(localFilePath);
         return uploadResult;
 
     } catch (error) {

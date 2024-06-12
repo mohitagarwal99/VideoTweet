@@ -39,14 +39,20 @@ const registerUser = asyncHandler( async (req, res) =>{
 
 
     const avatarPath = req.files?.avatar[0]?.path;
-    const coverImagePath = req.files?.coverImage[0]?.path;
+    let coverImagePath;
 
     if(!avatarPath){
         throw new ApiError(400, "Avatar is required");
     }
 
+    if (req.files && Array.isArray(req.files.coverImage) && req.files.coverImage.length > 0){
+        coverImagePath = req.files.coverImage[0].path;
+    }
+
     const avatar = await uploadOnCloud(avatarPath);
     const coverImage = await uploadOnCloud(coverImagePath);
+
+    
 
     if (!avatar){
         throw new ApiError(500, "Error in uploading avatar");
@@ -55,7 +61,7 @@ const registerUser = asyncHandler( async (req, res) =>{
     const user = await User.create({
         fullname: fullName,
         avatar: avatar.url,
-        coverImage: coverImage.url || "",
+        coverImage: coverImage?.url || "",
         email,
         password,
         username: userName.toLowerCase(),
