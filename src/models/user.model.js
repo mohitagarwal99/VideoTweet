@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
-/*JWT is a beared token. Whosoever has the token is authneticated to access it*/
+/*JWT is a bearer token. Whosoever has the token is authneticated to access it*/
 
 const userSchema = new mongoose.Schema(
     {
@@ -67,7 +67,7 @@ userSchema.methods.generateAccessToken = function(){
         {
             _id: this._id,
             email: this.email,
-            username: this.email,
+            username: this.username,
             fullName: this.fullName,
         },
         process.env.ACCESS_TOKEN_SECRET,
@@ -88,4 +88,6 @@ userSchema.methods.generateRefreshToken = function(){
         }
     )
 }
+
+
 export const User = mongoose.model('User', userSchema);
