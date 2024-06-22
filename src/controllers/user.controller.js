@@ -1,9 +1,10 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import {ApiError} from "../utils/ApiError.js";
 import { User } from "../models/user.model.js";
-import uploadOnCloud from "../utils/cloudinary.js";
+import {uploadOnCloud, deleteFromCloud} from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
+import mongoose from "mongoose";
 
 const generateTokens = async (userId) => {
     try {
@@ -113,7 +114,7 @@ const loginUser = asyncHandler(async (req, res) => {
     if (!user){
         throw new ApiError(404, "User not found");
     }
-
+    console.log(password)
     const isPasswordValid = await user.isPasswordMatch(password);
 
     if(!isPasswordValid){
@@ -152,8 +153,8 @@ const logoutUser = asyncHandler(async (req, res) => {
     await User.findByIdAndUpdate(
         req.user._id,
         {
-            $set: {
-                refreshToken: undefined
+            $unset: {
+                refreshToken: 1
             },
         },
         {
@@ -185,7 +186,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
     // check if refresh token is valid
     // generate new access token
     // send response
-
+   
     const inputRefreshToken = req.cookies.refreshToken || req.body.refreshToken;
 
     if (!inputRefreshToken){
@@ -193,7 +194,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
     }
 
     try {
-        const decodedToken = jwt.verify(inputRefreshToken, REFRESH_TOKEN_SECRET);
+        const decodedToken = jwt.verify(inputRefreshToken, process.env.REFRESH_TOKEN_SECRET);
     
         const user = await User.findById(decodedToken?._id);
     
@@ -307,6 +308,16 @@ const updateUserAvatar = asyncHandler( async (req, res) => {
         throw new ApiError(400, "error while uploading on avatar");
     }
 
+    const deleteResult = await deleteFromCloud(req.user?.avatar);
+
+    if(!deleteResult){
+        await deleteFromCloud(avatar.url);
+        throw new ApiError(400, "Error while deleting old avatar image");
+    }
+    else{
+        console.log("old avatar deleted successfully");
+    }
+
     const user = await User.findByIdAndUpdate(req.user?._id,
         {
             $set: {
@@ -329,7 +340,7 @@ const updateUserAvatar = asyncHandler( async (req, res) => {
 const updateUserCoverImage = asyncHandler( async (req, res) => {
     const coverImageLocalPath = req.file?.path;
 
-    if( !avatarLocalPath){
+    if( !coverImageLocalPath){
         throw new ApiError(400, "Cover image file is missing");
     }
 
@@ -360,12 +371,12 @@ const updateUserCoverImage = asyncHandler( async (req, res) => {
 })
 
 const getUserChannelProfile = asyncHandler(async(req, res) => {
-    const {userId} = req.params;
+    const {username} = req.params;
 
     if(!username?.trim()){
         throw new ApiError(400, "Username is required");
     }
-    const channel = User.aggregate([
+    const channel = await User.aggregate([
         {
             $match: {
                 username: username?.toLowerCase()
@@ -420,6 +431,7 @@ const getUserChannelProfile = asyncHandler(async(req, res) => {
         }
     ]);
 
+
     if (!channel?.length){
         throw new ApiError(404, "Channel not found");
     
@@ -430,7 +442,7 @@ const getUserChannelProfile = asyncHandler(async(req, res) => {
     .json(
         new ApiResponse(
             200,
-            channer[0],
+            channel[0],
             "Channel fetched successfully"
         )
     );
